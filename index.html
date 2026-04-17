@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐉 Mandarin Adventure!</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #E8394D;
+    --gold: #FFD43B;
+    --teal: #00B4D8;
+    --green: #52B788;
+    --purple: #9B72CF;
+    --bg: #FFF8F0;
+    --card-shadow: 0 6px 0px rgba(0,0,0,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(232,57,77,0.08) 0%, transparent 50%),
+      radial-gradient(circle at 85% 80%, rgba(0,180,216,0.08) 0%, transparent 50%);
+    min-height: 100vh;
+    padding: 20px;
+  }
+  header { text-align: center; padding: 30px 20px 10px; }
+  .logo  { font-size: 3rem; margin-bottom: 6px; }
+  header h1 { font-size: 2.2rem; font-weight: 900; color: var(--red); letter-spacing: -0.5px; line-height: 1.1; }
+  header p  { font-size: 1rem; color: #777; margin-top: 6px; font-weight: 600; }
+
+  /* TTS status bar */
+  #tts-bar {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: #1a1a2e;
+    color: white;
+    border-radius: 50px;
+    padding: 10px 22px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    max-width: 460px;
+    margin: 14px auto 0;
+  }
+  #tts-bar.visible { display: flex; }
+  .sound-wave { display: flex; align-items: center; gap: 3px; }
+  .sound-wave span {
+    display: block; width: 4px; border-radius: 3px;
+    background: var(--gold); animation: wave 0.8s ease-in-out infinite;
+  }
+  .sound-wave span:nth-child(1) { height: 8px;  animation-delay: 0s; }
+  .sound-wave span:nth-child(2) { height: 16px; animation-delay: 0.1s; }
+  .sound-wave span:nth-child(3) { height: 22px; animation-delay: 0.2s; }
+  .sound-wave span:nth-child(4) { height: 16px; animation-delay: 0.3s; }
+  .sound-wave span:nth-child(5) { height: 8px;  animation-delay: 0.4s; }
+  @keyframes wave {
+    0%,100% { transform: scaleY(0.4); }
+    50%      { transform: scaleY(1); }
+  }
+  #tts-label { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  #tts-warn {
+    display: none;
+    background: #fff3cd;
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #856404;
+    max-width: 500px;
+    margin: 12px auto 0;
+    text-align: center;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex; justify-content: center; gap: 10px;
+    flex-wrap: wrap; margin: 24px auto 10px; max-width: 700px;
+  }
+  .tab-btn {
+    background: white; border: 3px solid transparent; border-radius: 50px;
+    padding: 10px 20px; font-family: 'Nunito', sans-serif; font-size: 0.95rem;
+    font-weight: 800; cursor: pointer; transition: all 0.2s;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.12); display: flex; align-items: center; gap: 6px;
+  }
+  .tab-btn:hover  { transform: translateY(-2px); }
+  .tab-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.12); }
+  .tab-btn.safety { border-color: var(--red);    color: var(--red); }
+  .tab-btn.trains { border-color: var(--teal);   color: var(--teal); }
+  .tab-btn.food   { border-color: var(--green);  color: var(--green); }
+  .tab-btn.greet  { border-color: var(--purple); color: var(--purple); }
+  .tab-btn.active.safety { background: var(--red);    color: white; }
+  .tab-btn.active.trains { background: var(--teal);   color: white; }
+  .tab-btn.active.food   { background: var(--green);  color: white; }
+  .tab-btn.active.greet  { background: var(--purple); color: white; }
+
+  /* SECTIONS */
+  .section { display: none; max-width: 880px; margin: 0 auto; }
+  .section.active { display: block; }
+  .section-header { text-align: center; padding: 20px 10px 4px; font-size: 1.5rem; font-weight: 900; }
+  .section-sub    { text-align: center; font-size: 0.85rem; color: #aaa; font-weight: 700; margin-bottom: 16px; }
+  .safety .section-header { color: var(--red); }
+  .trains .section-header { color: var(--teal); }
+  .food   .section-header { color: var(--green); }
+  .greet  .section-header { color: var(--purple); }
+
+  /* Group label */
+  .group-label {
+    font-size: 0.75rem; font-weight: 900; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #c0c0c0;
+    padding: 4px 14px 10px; grid-column: 1 / -1; margin-top: 4px;
+  }
+
+  /* GRID */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px; padding: 0 10px 40px;
+  }
+
+  /* CARD */
+  .card {
+    background: white; border-radius: 20px; padding: 44px 18px 16px 18px;
+    box-shadow: var(--card-shadow); cursor: pointer;
+    transition: transform 0.18s, box-shadow 0.18s;
+    border-top: 5px solid transparent; position: relative; overflow: hidden;
+    user-select: none;
+  }
+  .card:hover  { transform: translateY(-5px); box-shadow: 0 12px 0px rgba(0,0,0,0.12); }
+  .card:active { transform: translateY(2px);  box-shadow: 0 3px 0px rgba(0,0,0,0.12); }
+  .card.playing { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+  .section-safety .card { border-top-color: var(--red); }
+  .section-trains .card { border-top-color: var(--teal); }
+  .section-food   .card { border-top-color: var(--green); }
+  .section-greet  .card { border-top-color: var(--purple); }
+
+  /* Badge */
+  .phrase-badge {
+    position: absolute; top: 10px; left: 14px;
+    font-size: 0.62rem; font-weight: 900; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 20px;
+    background: #f0f0f0; color: #bbb;
+  }
+  .phrase-badge.announcement {
+    background: rgba(0,180,216,0.14); color: var(--teal);
+  }
+  .section-safety .phrase-badge.phrase { background: rgba(232,57,77,0.1);   color: var(--red); }
+  .section-trains .phrase-badge.phrase { background: rgba(0,180,216,0.1);   color: var(--teal); }
+  .section-food   .phrase-badge.phrase { background: rgba(82,183,136,0.1);  color: var(--green); }
+  .section-greet  .phrase-badge.phrase { background: rgba(155,114,207,0.1); color: var(--purple); }
+
+  .card-emoji   { font-size: 1.8rem; margin-bottom: 6px; display: block; }
+  .card-chinese { font-family: 'Noto Sans SC', sans-serif; font-size: 1.9rem; font-weight: 700; line-height: 1.25; margin-bottom: 5px; color: #1a1a1a; }
+  .card-chinese.long  { font-size: 1.35rem; }
+  .card-chinese.vlong { font-size: 1.1rem; }
+  .card-pinyin  { font-size: 0.85rem; color: #999; font-weight: 700; margin-bottom: 4px; font-style: italic; line-height: 1.4; }
+  .card-english { font-size: 0.95rem; font-weight: 900; color: #333; margin-bottom: 5px; line-height: 1.35; }
+  .card-tip     { font-size: 0.74rem; color: #bbb; font-weight: 600; line-height: 1.4; border-top: 1px dashed #eee; padding-top: 7px; margin-top: 5px; }
+
+  /* Speak btn */
+  .speak-btn {
+    position: absolute; top: 10px; right: 10px;
+    background: #f3f3f3; border: none; border-radius: 50%;
+    width: 32px; height: 32px; font-size: 1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .speak-btn:hover  { background: #e0e0e0; transform: scale(1.1); }
+  .speak-btn.active { background: var(--gold); animation: pulse-btn 0.55s ease infinite alternate; }
+  @keyframes pulse-btn { from { transform: scale(1); } to { transform: scale(1.18); } }
+
+  /* Bounce */
+  @keyframes bounce-pop {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.05) translateY(-3px); }
+    60%  { transform: scale(0.98); }
+    100% { transform: scale(1); }
+  }
+  .bounce { animation: bounce-pop 0.3s ease; }
+
+  /* Stars */
+  .stars { position: fixed; pointer-events: none; top:0; left:0; width:100%; height:100%; z-index:0; overflow:hidden; }
+  .star  { position: absolute; opacity: 0.06; animation: float linear infinite; }
+  @keyframes float {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 0.06; }
+    50%  { opacity: 0.1; }
+    100% { transform: translateY(-120vh) rotate(360deg); opacity: 0; }
+  }
+  main   { position: relative; z-index: 1; }
+  footer { text-align: center; padding: 10px 20px 30px; color: #bbb; font-size: 0.8rem; font-weight: 600; }
+  footer span { color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<main>
+<header>
+  <div class="logo">🐉</div>
+  <h1>Mandarin Adventure!</h1>
+  <p>Tap any card to hear it spoken in Mandarin · Tap 🔊 to replay</p>
+</header>
+
+<div id="tts-bar">
+  <div class="sound-wave"><span></span><span></span><span></span><span></span><span></span></div>
+  <span id="tts-label">Speaking…</span>
+</div>
+<div id="tts-warn">⚠️ Mandarin speech not found on this device. Try Chrome or Edge on a laptop/desktop for the best experience!</div>
+
+<div class="tabs">
+  <button class="tab-btn safety active" onclick="showTab('safety')">🚨 Safety</button>
+  <button class="tab-btn trains"        onclick="showTab('trains')">🚄 Trains</button>
+  <button class="tab-btn food"          onclick="showTab('food')">🥟 Food</button>
+  <button class="tab-btn greet"         onclick="showTab('greet')">👋 Greetings</button>
+</div>
+
+<div class="section safety active" id="sec-safety">
+  <div class="section-header">🚨 Safety Phrases</div>
+  <div class="section-sub">Tap a card to hear it in Mandarin!</div>
+  <div class="cards section-safety" id="cards-safety"></div>
+</div>
+
+<div class="section trains" id="sec-trains">
+  <div class="section-header">🚄 Trains &amp; Announcements</div>
+  <div class="section-sub">Words you need + real phrases heard over the loudspeaker!</div>
+  <div class="cards section-trains" id="cards-trains"></div>
+</div>
+
+<div class="section food" id="sec-food">
+  <div class="section-header">🥟 Food &amp; Eating Out</div>
+  <div class="section-sub">Words and phrases for restaurants, markets and snack time!</div>
+  <div class="cards section-food" id="cards-food"></div>
+</div>
+
+<div class="section greet" id="sec-greet">
+  <div class="section-header">👋 Hello, Please &amp; Thank You</div>
+  <div class="section-sub">Polite phrases that will make everyone smile!</div>
+  <div class="cards section-greet" id="cards-greet"></div>
+</div>
+
+<footer>Made with <span>♥</span> for curious little learners 🌟</footer>
+</main>
+
+<script>
+const data = {
+  safety: [
+    {g:"Key Words",        t:"word",         e:"🏥", zh:"医院",                 py:"Yīyuàn",                          en:"Hospital",                              tip:"Point to this if someone needs a doctor."},
+    {g:"Key Words",        t:"word",         e:"🚓", zh:"警察",                 py:"Jǐngchá",                         en:"Police",                                tip:"110 is the police number in China."},
+    {g:"Key Words",        t:"word",         e:"🚑", zh:"救护车",               py:"Jiùhùchē",                        en:"Ambulance",                             tip:"120 is the ambulance number in China."},
+    {g:"Key Words",        t:"word",         e:"🔥", zh:"火！",                 py:"Huǒ!",                            en:"Fire!",                                 tip:"Say this loudly and find the exit sign."},
+    {g:"Key Words",        t:"word",         e:"🚫", zh:"停！",                 py:"Tíng!",                           en:"Stop!",                                 tip:"A very important word — say it firmly."},
+    {g:"Useful Phrases",   t:"phrase",       e:"🆘", zh:"帮帮我！",             py:"Bāng bāng wǒ!",                   en:"Help me!",                              tip:"Say this loudly if you need help from an adult."},
+    {g:"Useful Phrases",   t:"phrase",       e:"🤕", zh:"我受伤了",             py:"Wǒ shòushāng le",                 en:"I am hurt",                             tip:"Use this if you fall or feel pain."},
+    {g:"Useful Phrases",   t:"phrase",       e:"🤒", zh:"我生病了",             py:"Wǒ shēngbìng le",                 en:"I feel sick",                           tip:"Tell a grown-up straight away."},
+    {g:"Useful Phrases",   t:"phrase",       e:"🧍", zh:"我迷路了",             py:"Wǒ mílù le",                      en:"I am lost",                             tip:"Find a police officer or shop worker to help."},
+    {g:"Useful Phrases",   t:"phrase",       e:"👨‍👩‍👦",zh:"我找不到我的家人",   py:"Wǒ zhǎo bù dào wǒ de jiārén",    en:"I can't find my family",                tip:"Say this to a police officer or shop worker."},
+    {g:"Useful Phrases",   t:"phrase",       e:"📞", zh:"请帮我打电话",         py:"Qǐng bāng wǒ dǎ diànhuà",        en:"Please help me make a phone call",      tip:"110 = police · 120 = ambulance · 119 = fire."},
+    {g:"Useful Phrases",   t:"phrase",       e:"🚷", zh:"不要跟陌生人走",       py:"Bùyào gēn mòshēngrén zǒu",       en:"Don't go with strangers",               tip:"Always stay with your grown-up!"},
+    {g:"Useful Phrases",   t:"phrase",       e:"🗺️", zh:"我需要帮助",           py:"Wǒ xūyào bāngzhù",               en:"I need help",                           tip:"A clear, simple way to ask for help."},
+  ],
+  trains: [
+    {g:"Key Words",                        t:"word",         e:"🎫", zh:"票",       py:"Piào",          en:"Ticket",           tip:"Scan your ticket at the barrier gates."},
+    {g:"Key Words",                        t:"word",         e:"🚄", zh:"高铁",     py:"Gāotiě",        en:"High-speed train", tip:"China's bullet trains go up to 350 km/h!"},
+    {g:"Key Words",                        t:"word",         e:"🚇", zh:"地铁",     py:"Dìtiě",         en:"Subway / Metro",   tip:"The underground train in big cities."},
+    {g:"Key Words",                        t:"word",         e:"🚉", zh:"火车站",   py:"Huǒchē zhàn",   en:"Train station",    tip:"Look for this sign when you arrive."},
+    {g:"Key Words",                        t:"word",         e:"🚪", zh:"出口",     py:"Chūkǒu",        en:"Exit",             tip:"Always know where the exit is!"},
+    {g:"Key Words",                        t:"word",         e:"🔛", zh:"入口",     py:"Rùkǒu",         en:"Entrance",         tip:"This is where you go in."},
+    {g:"Key Words",                        t:"word",         e:"🚻", zh:"厕所",     py:"Cèsuǒ",         en:"Toilet",           tip:"男 (nán) = boys · 女 (nǚ) = girls."},
+    {g:"Key Words",                        t:"word",         e:"💺", zh:"座位",     py:"Zuòwèi",        en:"Seat",             tip:"Your ticket number matches the seat number."},
+    {g:"Key Words",                        t:"word",         e:"🕐", zh:"站台",     py:"Zhàntái",       en:"Platform",         tip:"Check the board for your platform number."},
+    {g:"Key Words",                        t:"word",         e:"🧳", zh:"行李",     py:"Xínglǐ",        en:"Luggage",          tip:"Keep your bag close on the train."},
+    {g:"Useful Phrases",                   t:"phrase",       e:"🗺️", zh:"……在哪里？",py:"…zài nǎlǐ?",     en:"Where is…?",       tip:"Point at a word card + say this phrase."},
+    {g:"Useful Phrases",                   t:"phrase",       e:"⏱️", zh:"几点出发？",py:"Jǐ diǎn chūfā?", en:"What time do we leave?", tip:"Point to your watch and ask this!"},
+    {g:"Useful Phrases",                   t:"phrase",       e:"💺", zh:"这是我的座位", py:"Zhè shì wǒ de zuòwèi", en:"This is my seat", tip:"Say politely if someone is sitting in your seat."},
+    {g:"Useful Phrases",                   t:"phrase",       e:"🚇", zh:"请问怎么坐地铁？", py:"Qǐngwèn zěnme zuò dìtiě?", en:"How do I take the subway?", tip:"Ask station staff — they will point the way."},
+    {g:"📢 Announcements You'll Hear",     t:"announcement", e:"🔔", zh:"列车即将进站，请勿靠近黄线",             py:"Lièchē jíjiāng jìn zhàn, qǐng wù kàojìn huáng xiàn",           en:"Train approaching — stay behind the yellow line!",                  tip:"You'll hear this just before the train arrives."},
+    {g:"📢 Announcements You'll Hear",     t:"announcement", e:"🚆", zh:"下一班列车五分钟后到达",                py:"Xià yī bān lièchē wǔ fēnzhōng hòu dàodá",                       en:"The next train arrives in 5 minutes",                               tip:"Count on your fingers while you wait!"},
+    {g:"📢 Announcements You'll Hear",     t:"announcement", e:"🚪", zh:"请注意，车门即将关闭",                 py:"Qǐng zhùyì, chē mén jíjiāng guānbì",                            en:"Attention — doors are about to close!",                             tip:"Step back or you'll get stuck in the doors!"},
+    {g:"📢 Announcements You'll Hear",     t:"announcement", e:"🚏", zh:"下一站是……，请准备下车",               py:"Xià yí zhàn shì…, qǐng zhǔnbèi xià chē",                        en:"Next stop is… — please get ready to exit",                         tip:"Listen for your station name in the gap!"},
+    {g:"📢 Announcements You'll Hear",     t:"announcement", e:"🎫", zh:"本次列车终点站是……",                  py:"Běn cì lièchē zhōngdiǎn zhàn shì…",                             en:"The final destination of this train is…",                          tip:"Check it matches your ticket!"},
+    {g:"📢 Announcements You'll Hear",     t:"announcement", e:"🚶", zh:"请勿在车厢内奔跑",                    py:"Qǐng wù zài chēxiāng nèi bēnpǎo",                              en:"Please do not run inside the carriage",                            tip:"Walk carefully — the floor can be slippery."},
+    {g:"📢 Announcements You'll Hear",     t:"announcement", e:"🎒", zh:"请看管好您的随身行李",                py:"Qǐng kānguǎn hǎo nín de suíshēn xínglǐ",                        en:"Please keep your belongings with you at all times",                tip:"Hold your bag tight and don't leave it on the seat."},
+    {g:"📢 Announcements You'll Hear",     t:"announcement", e:"🪑", zh:"请给老人、孕妇和儿童让座",            py:"Qǐng gěi lǎorén, yùnfù hé értóng ràng zuò",                     en:"Please give up your seat for elderly people, pregnant passengers and children", tip:"It's kind to give up your seat — well done if you do!"},
+    {g:"📢 Announcements You'll Hear",     t:"announcement", e:"📵", zh:"请勿在车内大声喧哗",                  py:"Qǐng wù zài chē nèi dàshēng xuānhuá",                           en:"Please keep noise down inside the train",                          tip:"Use your indoor voice on the train!"},
+    {g:"📢 Announcements You'll Hear",     t:"announcement", e:"⚠️", zh:"紧急情况请按紧急按钮",               py:"Jǐnjí qíngkuàng qǐng àn jǐnjí ànniǔ",                          en:"In an emergency, press the emergency button",                      tip:"The red button is only for real emergencies."},
+  ],
+  food: [
+    {g:"Foods & Drinks",      t:"word",   e:"🥟", zh:"饺子",   py:"Jiǎozi",    en:"Dumplings",   tip:"Boiled or fried little pockets of yumminess!"},
+    {g:"Foods & Drinks",      t:"word",   e:"🍜", zh:"面条",   py:"Miàntiáo",  en:"Noodles",     tip:"It is polite to slurp noodles in China — go for it!"},
+    {g:"Foods & Drinks",      t:"word",   e:"🍚", zh:"米饭",   py:"Mǐfàn",     en:"Rice",        tip:"Eaten at almost every meal in China."},
+    {g:"Foods & Drinks",      t:"word",   e:"🥢", zh:"筷子",   py:"Kuàizi",    en:"Chopsticks",  tip:"Hold one still and move the top one to pick up food."},
+    {g:"Foods & Drinks",      t:"word",   e:"💧", zh:"水",     py:"Shuǐ",      en:"Water",       tip:"Drink bottled or boiled water when travelling."},
+    {g:"Foods & Drinks",      t:"word",   e:"🍵", zh:"茶",     py:"Chá",       en:"Tea",         tip:"Try jasmine tea — it smells amazing!"},
+    {g:"Foods & Drinks",      t:"word",   e:"🥚", zh:"鸡蛋",   py:"Jīdàn",     en:"Egg",         tip:"A super common breakfast food in China."},
+    {g:"Foods & Drinks",      t:"word",   e:"🍗", zh:"鸡肉",   py:"Jī ròu",    en:"Chicken",     tip:"One of the most popular meats in Chinese cooking."},
+    {g:"Foods & Drinks",      t:"word",   e:"🐟", zh:"鱼",     py:"Yú",        en:"Fish",        tip:"Watch out — fish in China often has small bones!"},
+    {g:"Foods & Drinks",      t:"word",   e:"🥦", zh:"蔬菜",   py:"Shūcài",    en:"Vegetables",  tip:"Stir-fried veggies are colourful and tasty."},
+    {g:"Foods & Drinks",      t:"word",   e:"🍦", zh:"冰淇淋", py:"Bīngqílín", en:"Ice cream",   tip:"A great reward after a long day of exploring!"},
+    {g:"Foods & Drinks",      t:"word",   e:"🌶️", zh:"辣",     py:"Là",        en:"Spicy",       tip:"Watch out — lots of Chinese food is very spicy!"},
+    {g:"At the Restaurant",   t:"phrase", e:"🙋", zh:"服务员！",            py:"Fúwùyuán!",                       en:"Waiter / Excuse me!",              tip:"Call this to get the waiter's attention."},
+    {g:"At the Restaurant",   t:"phrase", e:"📋", zh:"可以看一下菜单吗？", py:"Kěyǐ kàn yīxià càidān ma?",       en:"Can I see the menu please?",       tip:"They will bring the menu right over."},
+    {g:"At the Restaurant",   t:"phrase", e:"🧧", zh:"我想要……",           py:"Wǒ xiǎng yào…",                   en:"I would like…",                   tip:"Point at the menu after saying this."},
+    {g:"At the Restaurant",   t:"phrase", e:"🤤", zh:"好吃！",             py:"Hǎo chī!",                        en:"Delicious!",                       tip:"Say this after eating — it will make the cook smile!"},
+    {g:"At the Restaurant",   t:"phrase", e:"💰", zh:"买单，谢谢",         py:"Mǎidān, xièxiè",                  en:"The bill please, thank you",       tip:"Say this when you are ready to pay."},
+    {g:"At the Restaurant",   t:"phrase", e:"🌶️", zh:"不要放辣椒，谢谢",  py:"Bùyào fàng làjiāo, xièxiè",      en:"No chilli please, thank you",      tip:"Very useful if you don't like spicy food!"},
+    {g:"At the Restaurant",   t:"phrase", e:"🙅", zh:"我不吃……",           py:"Wǒ bù chī…",                      en:"I don't eat…",                    tip:"Point at an ingredient you want to avoid."},
+    {g:"At the Restaurant",   t:"phrase", e:"🥄", zh:"可以给我一把勺子吗？", py:"Kěyǐ gěi wǒ yī bǎ sháozi ma?", en:"Can I have a spoon please?",       tip:"Chopsticks are tricky — a spoon is totally fine!"},
+  ],
+  greet: [
+    {g:"Key Words",        t:"word",   e:"👋", zh:"你好",   py:"Nǐ hǎo",       en:"Hello!",           tip:"The most important word — use it with everyone!"},
+    {g:"Key Words",        t:"word",   e:"🌅", zh:"早上好", py:"Zǎoshang hǎo", en:"Good morning!",    tip:"Say this at breakfast time."},
+    {g:"Key Words",        t:"word",   e:"👋", zh:"再见",   py:"Zàijiàn",      en:"Goodbye!",         tip:"Wave your hand when you say this."},
+    {g:"Key Words",        t:"word",   e:"🙏", zh:"谢谢",   py:"Xièxiè",       en:"Thank you!",       tip:"Say this whenever someone helps you."},
+    {g:"Key Words",        t:"word",   e:"😊", zh:"不客气", py:"Bù kèqì",      en:"You're welcome!",  tip:"Say this when someone thanks you."},
+    {g:"Key Words",        t:"word",   e:"🙋", zh:"对不起", py:"Duìbuqǐ",      en:"Sorry / Excuse me",tip:"Use this if you bump into someone."},
+    {g:"Key Words",        t:"word",   e:"✅", zh:"好的",   py:"Hǎo de",       en:"OK / Alright",     tip:"A super handy word for agreeing."},
+    {g:"Useful Phrases",   t:"phrase", e:"😄", zh:"我叫……",            py:"Wǒ jiào…",               en:"My name is…",               tip:"Then say your name — people love hearing it!"},
+    {g:"Useful Phrases",   t:"phrase", e:"🧒", zh:"我五岁了",          py:"Wǒ wǔ suì le",           en:"I am five years old",       tip:"Children love saying their age!"},
+    {g:"Useful Phrases",   t:"phrase", e:"🤝", zh:"很高兴认识你",      py:"Hěn gāoxìng rènshí nǐ", en:"Nice to meet you!",         tip:"Say this when you meet someone new."},
+    {g:"Useful Phrases",   t:"phrase", e:"🌍", zh:"我是英国人",        py:"Wǒ shì Yīngguó rén",    en:"I am British",              tip:"People will be curious and friendly!"},
+    {g:"Useful Phrases",   t:"phrase", e:"🔢", zh:"多少钱？",          py:"Duōshǎo qián?",          en:"How much does it cost?",    tip:"Useful in shops and markets."},
+    {g:"Useful Phrases",   t:"phrase", e:"🤷", zh:"我不懂",            py:"Wǒ bù dǒng",             en:"I don't understand",        tip:"It's totally OK not to understand!"},
+    {g:"Useful Phrases",   t:"phrase", e:"🗣️", zh:"请说慢一点",        py:"Qǐng shuō màn yīdiǎn",  en:"Please speak more slowly",  tip:"People will slow down for you — just ask!"},
+    {g:"Useful Phrases",   t:"phrase", e:"📷", zh:"可以拍照吗？",      py:"Kěyǐ pāizhào ma?",      en:"Can I take a photo?",       tip:"Always ask first — it's very polite!"},
+    {g:"Useful Phrases",   t:"phrase", e:"❓", zh:"请问……在哪里？",    py:"Qǐngwèn… zài nǎlǐ?",   en:"Excuse me, where is…?",     tip:"Point at something and add this — very useful!"},
+  ]
+};
+
+// ─── TTS ───────────────────────────────────────────────────────────────
+let currentCard = null;
+let zhVoice = null;
+
+function initVoices() {
+  if (!window.speechSynthesis) {
+    document.getElementById('tts-warn').style.display = 'block';
+    return;
+  }
+  const load = () => {
+    const voices = window.speechSynthesis.getVoices();
+    zhVoice = voices.find(v => v.lang === 'zh-CN')
+           || voices.find(v => v.lang === 'zh-TW')
+           || voices.find(v => v.lang.startsWith('zh'));
+    if (!zhVoice) document.getElementById('tts-warn').style.display = 'block';
+  };
+  if (window.speechSynthesis.getVoices().length > 0) load();
+  else window.speechSynthesis.onvoiceschanged = load;
+}
+
+function clearCard(cardEl) {
+  if (!cardEl) return;
+  cardEl.classList.remove('playing');
+  const btn = cardEl.querySelector('.speak-btn');
+  if (btn) { btn.textContent = '🔊'; btn.classList.remove('active'); }
+}
+
+function speak(text, cardEl) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  clearCard(currentCard);
+
+  const bar   = document.getElementById('tts-bar');
+  const label = document.getElementById('tts-label');
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang  = 'zh-CN';
+  utter.rate  = 0.82;
+  utter.pitch = 1.0;
+  if (zhVoice) utter.voice = zhVoice;
+
+  utter.onstart = () => {
+    currentCard = cardEl;
+    cardEl.classList.add('playing');
+    const btn = cardEl.querySelector('.speak-btn');
+    if (btn) { btn.textContent = '🎵'; btn.classList.add('active'); }
+    label.textContent = text;
+    bar.classList.add('visible');
+  };
+
+  const done = () => {
+    clearCard(cardEl);
+    currentCard = null;
+    bar.classList.remove('visible');
+  };
+  utter.onend   = done;
+  utter.onerror = done;
+
+  window.speechSynthesis.speak(utter);
+}
+
+// ─── BUILD CARDS ───────────────────────────────────────────────────────
+function buildCards(cat) {
+  const container = document.getElementById('cards-' + cat);
+  container.innerHTML = '';
+  let lastGroup = null;
+
+  data[cat].forEach(item => {
+    if (item.g !== lastGroup) {
+      const lbl = document.createElement('div');
+      lbl.className = 'group-label';
+      lbl.textContent = item.g;
+      container.appendChild(lbl);
+      lastGroup = item.g;
+    }
+
+    const len = item.zh.length;
+    const sizeClass = len > 12 ? 'vlong' : len > 7 ? 'long' : '';
+
+    const badgeLabel = item.t === 'announcement' ? '📢 Announcement'
+                     : item.t === 'phrase'        ? '💬 Phrase'
+                     :                              '🔤 Word';
+    const badgeCls   = item.t === 'announcement' ? 'announcement'
+                     : item.t === 'phrase'        ? 'phrase'
+                     :                              '';
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="phrase-badge ${badgeCls}">${badgeLabel}</div>
+      <button class="speak-btn" title="Listen again">🔊</button>
+      <span class="card-emoji">${item.e}</span>
+      <div class="card-chinese ${sizeClass}">${item.zh}</div>
+      <div class="card-pinyin">${item.py}</div>
+      <div class="card-english">${item.en}</div>
+      ${item.tip ? `<div class="card-tip">💡 ${item.tip}</div>` : ''}
+    `;
+
+    const doSpeak = () => speak(item.zh, card);
+
+    card.addEventListener('click', () => {
+      card.classList.remove('bounce');
+      void card.offsetWidth;
+      card.classList.add('bounce');
+      doSpeak();
+    });
+    card.querySelector('.speak-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      doSpeak();
+    });
+    card.addEventListener('animationend', () => card.classList.remove('bounce'));
+    container.appendChild(card);
+  });
+}
+
+// ─── TABS ──────────────────────────────────────────────────────────────
+function showTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + tab).classList.add('active');
+  document.querySelector('.tab-btn.' + tab).classList.add('active');
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  clearCard(currentCard); currentCard = null;
+  document.getElementById('tts-bar').classList.remove('visible');
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────
+initVoices();
+['safety','trains','food','greet'].forEach(buildCards);
+
+// Background floaties
+const starsDiv = document.getElementById('stars');
+['⭐','🌟','✨','💫','🐉','🏮','🎋','🥟','🚄','🌸'].forEach((ch, i) => {
+  const s = document.createElement('div');
+  s.className = 'star';
+  s.textContent = ch;
+  s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;
+    font-size:${0.8+Math.random()*0.9}rem;
+    animation-duration:${14+Math.random()*20}s;
+    animation-delay:${Math.random()*16}s;`;
+  starsDiv.appendChild(s);
+});
+</script>
+</body>
+</html>
